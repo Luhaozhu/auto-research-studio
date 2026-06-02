@@ -1,0 +1,36 @@
+{
+  "skill_name": "research-wiki",
+  "evals": [
+    {
+      "id": 0,
+      "name": "cold-start-full",
+      "prompt": "我刚装好这个 research-wiki 技能，目前还没有任何数据仓库。帮我从零搭一个跟踪『LLM agent 安全与防御』(LLM agent security and defense) 方向的论文知识库：初始化好数据仓库、把研究方向定义清楚写好，然后先抓几篇该方向最新的 arxiv 论文进去试试。数据仓库请建在我给你的工作目录下。",
+      "expected_output": "A data repo created under the given HOME: data/directions/registry.yaml with a direction entry; a vault skeleton with raw/{paper,text,meta,figures}, wiki/{papers,surveys,concepts,index.md,log.md}, report/; a non-stub research_direction.md; state.json. Ideally a few papers fetched into raw/meta.",
+      "files": [],
+      "assertions": [
+        "registry.yaml in standard data/directions/ location",
+        "full vault skeleton (raw/{paper,text,meta,figures} + wiki/{papers,surveys,concepts,index,log} + report/)",
+        "research_direction.md is filled-in (non-stub)",
+        "state.json present and initialized=true",
+        "at least one paper fetched into raw/meta",
+        "at least one Chinese wiki paper page compiled",
+        "daily briefing report/<date>.md produced"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "scaffold-only",
+      "prompt": "用 research-wiki 帮我新建一个研究方向，slug 叫 retrieval-augmented-generation，标题『检索增强生成 (RAG)』，arxiv 分类用 cs.CL 和 cs.IR，关键词用 RAG、retrieval-augmented generation、dense retrieval。先把数据仓库和这个方向建好就行，论文我之后自己再拉。仓库建在我给你的工作目录下。",
+      "expected_output": "init-repo + new only (no paper download): registry.yaml with the retrieval-augmented-generation entry carrying the cs.CL/cs.IR categories and the three keywords; full vault skeleton including report/; research_direction.md and state.json present; state initialized=false.",
+      "files": [],
+      "assertions": [
+        "registry.yaml in standard data/directions/ location",
+        "direction entry has slug + cs.CL/cs.IR + the 3 keywords",
+        "full vault skeleton including report/",
+        "research_direction.md written",
+        "state.json present, initialized=false",
+        "scaffold only — no papers downloaded"
+      ]
+    }
+  ]
+}

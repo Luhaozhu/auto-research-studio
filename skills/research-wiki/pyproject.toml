@@ -1,0 +1,17 @@
+[project]
+name = "research-wiki"
+version = "0.1.0"
+description = "Build and maintain a per-direction LLM Wiki of AI research papers"
+requires-python = ">=3.10"
+dependencies = [
+    "pymupdf>=1.24",
+    "pyyaml>=6.0",
+]
+
+# PyMuPDF does PDF→full-text extraction (pdf_extract.py) — the primary, Docker-
+# free path. PyYAML is only needed for the registry path. GROBID is an optional
+# external service (Docker), not a Python dependency. Optional S2_API_KEY env var
+# for Semantic Scholar.
+
+[tool.uv]
+package = false

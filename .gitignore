@@ -1,0 +1,17 @@
+# Local, stateful vault — synced manually, never committed (per user choice)
+data/
+
+# Python virtualenvs / caches
+**/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Local planning notes (not needed by the remote agent)
+PLAN.md
+
+# OS cruft
+.DS_Store
+Thumbs.db
