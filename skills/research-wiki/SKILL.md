@@ -10,41 +10,66 @@ read raw papers, **compile** them into a persistent, cross-linked Markdown wiki
 (do not re-retrieve from scratch each time). Each research direction is one
 self-contained vault under `<home>/data/vaults/<slug>/`.
 
-## Lifecycle (do these in order on a fresh install)
+## Lifecycle
 
-A direction goes: **setup → init-repo → new → init (cold-start backfill) →
-ingest (daily) → query / lint**. The first three are one-time; `ingest` is the
-recurring everyday command.
+Two scopes. **Once per machine**: `setup` (deps) + `init-repo` (the data repo).
+**Once per direction**: `new` + `init` — and creating a direction is *always* an
+**interview-driven init flow**, whether it's the user's 1st direction or their
+Nth. `ingest` is then the recurring everyday command per direction.
 
 ```
-0. setup       uv sync                                  install deps (once per machine)
-1. init-repo   vault_admin.py init-repo                 create the data/ repo + registry
-2. new         vault_admin.py new --slug <s> --title …  register a direction + empty vault
-3. init        cold-start backfill (~6 months + surveys)         first papers
-4. ingest      daily incremental update + 简报           the recurring command (cron)
-   query       answer questions from the wiki
-   lint        health-check the vault
+once / machine
+  0. setup       uv sync                                  install deps
+  1. init-repo   vault_admin.py init-repo                 create the data/ repo + registry
+
+once / direction  ← the "新建方向 init 流程": interview FIRST, then build
+  2. 采访方向    interview the user to lock the direction  (see「新建研究方向 · Step 2」below)
+  3. new         vault_admin.py new --slug <s> …          register direction + empty vault
+  4. init        cold-start backfill (~6 months + surveys)        first papers
+
+recurring / direction
+  5. ingest      daily incremental update + 简报           the everyday command (cron)
+     query       answer questions from the wiki
+     lint        health-check the vault
 ```
 
-**Figure out where the user is in this lifecycle before acting.** Brand-new
-("set up a research wiki for X") → run setup → init-repo → new → init. Already
-has a vault ("update my agent papers", "today's arXiv") → go straight to ingest.
-`vault_admin.py list` shows what exists and each direction's state.
+**Route by intent, not just by "does a vault exist". Three cases:**
+1. **Brand-new install** (no `data/` repo yet) → `setup` → `init-repo`, then the
+   new-direction flow (采访 → `new` → `init`).
+2. **Add a NEW direction / topic** — *even if other vaults already exist*
+   ("now also track X", "start a wiki on Y", "新开一个方向") → run the full
+   **新建方向 init 流程**: 采访 → `new` → `init`. Do **not** skip the interview just
+   because some vault exists, and do **not** dump the new topic into an unrelated
+   existing vault.
+3. **Operate an EXISTING direction** ("update my agent papers", "today's arXiv",
+   a slug already in the registry) → go straight to `ingest` (or `query`/`lint`).
 
-## 引导式上手（首次安装后，一步步带用户走）
-当用户**第一次**使用本 skill（还没有任何 vault），不要直接闷头跑脚本——按下面的
-节奏一步步带着用户走，每一步都先说明在做什么、再执行、再把结果告诉用户。
+Run `vault_admin.py list` first to see which directions exist and their state —
+that's how you tell case 2 (topic not in the registry) from case 3 (it is).
 
-**Step 0 · 装依赖（一次）** — 在 skill 目录执行 `uv sync`（或 `pip install
+## 新建研究方向 = 一套采访驱动的 init 流程（每次都走，别跳）
+**只要用户要开一个新方向**（第一次用本 skill，或已有 vault 又想加一个方向），都走
+同一套流程，不要直接闷头跑脚本：先**对话式采访**把方向问清楚 → 写方向文件 → `new`
+建 vault → `init` 冷启动。每一步先说明在做什么、再执行、再把结果回报给用户。
+
+> 首次安装额外要先做 **Step 0 setup**（`uv sync`）和 **Step 1 init-repo**（建 data 仓库），
+> 这两步**每台机器一次**；之后每开一个新方向都从 **Step 2 采访** 开始。已经装好的用户
+> 新建方向时直接从 Step 2 进入。
+
+**Step 0 · 装依赖（每台机器一次）** — 在 skill 目录执行 `uv sync`（或 `pip install
 pymupdf pyyaml`）。装好后所有脚本用 `.venv/bin/python scripts/<x>.py` 调用。
 
-**Step 1 · 建数据仓库（一次）** — `vault_admin.py init-repo`。把它打印的 home、
-registry 路径、依赖自检结果回报给用户，确认 home 落在用户期望的位置（默认就是
-skill 所在的仓库根；要换地方就 `--home` 或 `$AUTORESEARCH_HOME`）。
+**Step 1 · 建数据仓库（每台机器一次）** — `vault_admin.py init-repo`。把它打印的
+home、registry 路径、依赖自检结果回报给用户，确认 home 落在用户期望的位置（默认就是
+skill 所在的仓库根；要换地方就 `--home` 或 `$AUTORESEARCH_HOME`）。建完先跑一次
+`vault_admin.py list`，确认这个新方向的 slug 还没被占用（占用了就换 slug 或确认是不是
+想 `ingest` 旧方向）。
 
+<a id="direction-interview"></a>
 **Step 2 · 采访研究方向（最重要的一步，要问得细）** — 这是整个 Wiki 的基石，
-每一次打分取舍都以它为准。**不要只问一句「你想研究什么」就开建**。按下面的清单
-**逐簇追问**，一次问 1–2 簇，把用户的回答消化成具体的、可判定的描述：
+每一次打分取舍都以它为准。**这一步是硬关卡：方向没采访清楚、模板没填实，绝不进入
+Step 3/4 的论文搜索。** 采访方式是**对话式逐簇追问**——一次问 1–2 簇，读完用户的回答
+再追问、消化成具体、可判定的描述（而不是一次性甩一张大问卷）：
 
   1. **方向与目标**：一句话精确定义（拒绝「Agent 相关」这种泛词，追问到方法/问题
      层级）；做这个 Wiki 的目的（选题找 gap / 工程选型 / 写综述 / 追 SOTA / 教学）；
@@ -60,24 +85,26 @@ skill 所在的仓库根；要换地方就 `--home` 或 `$AUTORESEARCH_HOME`）�
   8. **节奏与规模**：bootstrap 回溯月数（默认 6，新兴方向 12–14）；冷启动收录上限
      `--max-papers`；每日/每周抓取节奏与触发时间。
 
-  把采访结果**写进一个 markdown 文件**（结构照 `assets/research_direction.template.md`），
-  这个文件就是下一步 `--direction-file` 的输入。模板每个小节都要填实，别留 `<...>` 占位符。
+  采访收尾前，**把每一簇消化后的结论复述给用户确认一遍**（尤其一句话定义、in/out-of-scope、
+  锚点工作、keywords），用户点头后再把结果**写进一个 markdown 文件**（结构照
+  `assets/research_direction.template.md`）。这个文件就是 Step 3 `--direction-file` 的输入。
+  **模板每个小节都要填实，别留 `<...>` 占位符**——留了就说明还没问清楚，回去补。
 
-**Step 3 · 注册方向 + 建 vault（一次）** — `vault_admin.py new --slug <slug>
+**Step 3 · 注册方向 + 建 vault** — `vault_admin.py new --slug <slug>
 --title "..." --categories ... --keywords ... --threshold 0.6
 --bootstrap-months <N> --direction-file <你写的方向文件>`。跑完用
-`vault_admin.py list` 确认。**校验关卡**：若你没传 `--direction-file`/`--description`，
-脚本会写一个占位 stub 并告警——那说明 Step 2 没做扎实，回去补完再继续，否则相关性
-打分没有判据。
+`vault_admin.py list` 确认。**硬关卡（务必遵守）**：必须带 `--direction-file`（或
+`--description`）指向 Step 2 写实的方向文件。若你没传，脚本会写一个占位 stub 并告警——
+**这时不要继续 init**，回 Step 2 把方向采访补完，否则相关性打分没有判据。
 
-**Step 4 · 冷启动回填（一次，较重）** — 跑下面「Workflow: `init`」整条流水线，
+**Step 4 · 冷启动回填（较重）** — 跑下面「Workflow: `init`」整条流水线，
 给方向灌入最初的一批论文（约 N 个月 + 综述）。`pdf_extract.py` 建议后台跑。
 
 **Step 5 · 之后每天** — 跑「Workflow: `ingest`」做增量更新并出简报；可选地用
 `schedule`/cron 定时。`query` 答疑、`lint` 体检。
 
-> 一句话记牢顺序：**setup → init-repo → 采访方向 → new → init →（每天）ingest**。
-> 前四步一次性；`init` 一次性但重；`ingest` 是天天跑的那条。
+> 一句话记牢顺序：**（每机一次）setup → init-repo；（每个新方向都走）采访方向 → new →
+> init →（每天）ingest**。`init` 一次性但重；`ingest` 是天天跑的那条。
 
 ### The data home & vault resolution
 The **home** is the directory that holds `data/` (registry + all vaults).
@@ -131,11 +158,15 @@ text to `raw/text/<id>.txt`. All summary/synthesis content the librarian writes
 is in **Chinese (中文)**.
 
 ## Workflow: `new` (register a direction + build its vault)
-First **interview the user** to pin down the direction — this is the single
-most important input, because every relevance score is judged against it. Run
-the full interview in **「引导式上手 · Step 2」** above (8 clusters: 方向/目标、
-in-scope、out-of-scope、问题/方法/benchmark、打分 rubric、锚点工作、检索配置、
-节奏规模). Write the answers into a markdown file using
+**Always runs for every new direction — first one or tenth.** First run
+`vault_admin.py list` to confirm the topic isn't already a registered direction
+(if it is, the user wants `ingest`, not `new`). Then **interview the user** to pin
+down the direction — this is the single most important input, because every
+relevance score is judged against it, and it is a **hard gate**: do not run `new`
+(let alone `init`) until the interview is done and the direction file is filled
+in. Run the full conversational interview in **「新建研究方向 · Step 2 · 采访研究方向」**
+above (8 clusters: 方向/目标、in-scope、out-of-scope、问题/方法/benchmark、打分
+rubric、锚点工作、检索配置、节奏规模). Write the answers into a markdown file using
 `assets/research_direction.template.md` as the skeleton (fill every section —
 no `<...>` placeholders left), then pass it as `--direction-file`:
 ```

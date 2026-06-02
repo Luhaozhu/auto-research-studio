@@ -68,8 +68,11 @@ uv sync                       # 或：pip install pymupdf pyyaml
 
 ## 完整生命周期
 
-> **setup → init-repo → 采访方向 → new → init →（每天）ingest → query / lint**
-> 前四步一次性；`init` 一次性但重；`ingest` 是天天跑的那条。
+> **（每台机器一次）setup → init-repo；（每开一个新方向都走）采访方向 → new →
+> init →（每天）ingest → query / lint**
+> `setup` / `init-repo` 每台机器一次；**新建任何一个方向都要重走「采访 → new → init」**
+> （不管是第 1 个还是第 N 个方向，采访都是硬关卡，方向没问清不进论文搜索）；
+> `init` 一次性但重；`ingest` 是天天跑的那条。
 
 ### Step 1 · `init-repo`（建数据仓库，一次）
 ```bash
@@ -78,9 +81,11 @@ uv sync                       # 或：pip install pymupdf pyyaml
 创建 `data/directions/` + `data/vaults/` + 空 `registry.yaml`，并打印 home / registry
 路径与依赖自检。幂等，可重复跑，不会覆盖已有数据。
 
-### Step 2 · 采访研究方向（最重要！要问得细）
-方向文件是整个 Wiki 的基石——每一次相关性打分都以它为准。**不要只问一句「研究什么」**，
-按 `assets/research_direction.template.md` 的 8 个小节逐项采访用户：
+### Step 2 · 采访研究方向（最重要！要问得细；每开一个新方向都走）
+方向文件是整个 Wiki 的基石——每一次相关性打分都以它为准。**这是硬关卡：方向没采访
+清楚、模板没填实，就不进入 new/init 的论文搜索。** 不管是第一次用还是已有 vault 再
+新开方向，都从这一步开始。**不要只问一句「研究什么」**，用对话式逐簇追问，按
+`assets/research_direction.template.md` 的 8 个小节逐项采访用户（一次问 1–2 簇）：
 
 1. 方向与目标（一句话精确定义 + 做 Wiki 的目的 + 已知工作 + 想从简报得到什么）
 2. in-scope 细分子主题（每类给典型例子）
