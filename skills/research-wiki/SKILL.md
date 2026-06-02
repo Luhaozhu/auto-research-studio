@@ -31,6 +31,54 @@ recurring everyday command.
 has a vault ("update my agent papers", "today's arXiv") → go straight to ingest.
 `vault_admin.py list` shows what exists and each direction's state.
 
+## 引导式上手（首次安装后，一步步带用户走）
+当用户**第一次**使用本 skill（还没有任何 vault），不要直接闷头跑脚本——按下面的
+节奏一步步带着用户走，每一步都先说明在做什么、再执行、再把结果告诉用户。
+
+**Step 0 · 装依赖（一次）** — 在 skill 目录执行 `uv sync`（或 `pip install
+pymupdf pyyaml`）。装好后所有脚本用 `.venv/bin/python scripts/<x>.py` 调用。
+
+**Step 1 · 建数据仓库（一次）** — `vault_admin.py init-repo`。把它打印的 home、
+registry 路径、依赖自检结果回报给用户，确认 home 落在用户期望的位置（默认就是
+skill 所在的仓库根；要换地方就 `--home` 或 `$AUTORESEARCH_HOME`）。
+
+**Step 2 · 采访研究方向（最重要的一步，要问得细）** — 这是整个 Wiki 的基石，
+每一次打分取舍都以它为准。**不要只问一句「你想研究什么」就开建**。按下面的清单
+**逐簇追问**，一次问 1–2 簇，把用户的回答消化成具体的、可判定的描述：
+
+  1. **方向与目标**：一句话精确定义（拒绝「Agent 相关」这种泛词，追问到方法/问题
+     层级）；做这个 Wiki 的目的（选题找 gap / 工程选型 / 写综述 / 追 SOTA / 教学）；
+     用户已熟悉的工作（避免收录常识）；最想从每日简报里得到什么。
+  2. **in-scope（细分子主题）**：要收录哪几类贡献？每类给 1–2 个典型例子。
+  3. **out-of-scope（明确排除）**：哪些沾边但坚决不要？（如纯预训练技巧、无方法贡献的
+     应用 demo、纯 prompt trick）——排除项写得越明确，打分越稳。
+  4. **具体问题 / 方法族 / benchmark**：方向想解决的 3–5 个具体问题；关键方法族；
+     关注的 benchmark/数据集（用来判断论文成色）。
+  5. **打分 rubric**：0.85–1.0 / 0.6–0.85 / 0.4–0.6 / <0.4 各代表什么；阈值（默认 0.6）。
+  6. **锚点工作 3–8 个**：代表性论文/方法名，既做打分参照系，也做 citation 雪球种子。
+  7. **检索配置**：arXiv categories；keywords（**务必连同义词/缩写一起列全**，召回靠它）。
+  8. **节奏与规模**：bootstrap 回溯月数（默认 6，新兴方向 12–14）；冷启动收录上限
+     `--max-papers`；每日/每周抓取节奏与触发时间。
+
+  把采访结果**写进一个 markdown 文件**（结构照 `assets/research_direction.template.md`），
+  这个文件就是下一步 `--direction-file` 的输入。模板每个小节都要填实，别留 `<...>` 占位符。
+
+**Step 3 · 注册方向 + 建 vault（一次）** — `vault_admin.py new --slug <slug>
+--title "..." --categories ... --keywords ... --threshold 0.6
+--bootstrap-months <N> --direction-file <你写的方向文件>`。跑完用
+`vault_admin.py list` 确认。**校验关卡**：若你没传 `--direction-file`/`--description`，
+脚本会写一个占位 stub 并告警——那说明 Step 2 没做扎实，回去补完再继续，否则相关性
+打分没有判据。
+
+**Step 4 · 冷启动回填（一次，较重）** — 跑下面「Workflow: `init`」整条流水线，
+给方向灌入最初的一批论文（约 N 个月 + 综述）。`pdf_extract.py` 建议后台跑。
+
+**Step 5 · 之后每天** — 跑「Workflow: `ingest`」做增量更新并出简报；可选地用
+`schedule`/cron 定时。`query` 答疑、`lint` 体检。
+
+> 一句话记牢顺序：**setup → init-repo → 采访方向 → new → init →（每天）ingest**。
+> 前四步一次性；`init` 一次性但重；`ingest` 是天天跑的那条。
+
 ### The data home & vault resolution
 The **home** is the directory that holds `data/` (registry + all vaults).
 `init-repo` creates it. Resolution (no flags needed once it exists):
@@ -84,10 +132,12 @@ is in **Chinese (中文)**.
 
 ## Workflow: `new` (register a direction + build its vault)
 First **interview the user** to pin down the direction — this is the single
-most important input, because every relevance score is judged against it. Get:
-the one-line scope, what's in-scope vs explicitly out-of-scope, the scoring
-rubric, anchor works, and the arXiv `categories` + `keywords` to search. Write
-that into a markdown file (use the headings in `research_direction.md`), then:
+most important input, because every relevance score is judged against it. Run
+the full interview in **「引导式上手 · Step 2」** above (8 clusters: 方向/目标、
+in-scope、out-of-scope、问题/方法/benchmark、打分 rubric、锚点工作、检索配置、
+节奏规模). Write the answers into a markdown file using
+`assets/research_direction.template.md` as the skeleton (fill every section —
+no `<...>` placeholders left), then pass it as `--direction-file`:
 ```
 vault_admin.py new --slug <slug> --title "..." \
     --categories cs.AI cs.CL --keywords "agent harness" "tool use" \

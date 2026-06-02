@@ -36,11 +36,14 @@ import vault_io  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
 CLAUDE_TEMPLATE = ASSETS / "CLAUDE.vault.md"
+RD_TEMPLATE = ASSETS / "research_direction.template.md"
 
+# Fallback only — the rich interview template lives in assets/research_direction.template.md
+# and is preferred whenever it exists. Keep this terse stub as a safety net.
 RD_STUB = """\
 # 研究方向：{title}
 
-## 一句话
+## 一句话定义
 <用一两句话精确描述这个方向研究什么。越具体越好——具体到目标论文、问题、方法层级。>
 
 ## 我关注什么（in-scope）
@@ -56,6 +59,13 @@ RD_STUB = """\
 ## 锚点工作（用于校准与 citation 雪球的种子，不限于此）
 <3-8 个代表性工作/方法名，作为相关性标定与种子扩展的锚点。>
 """
+
+
+def _rd_stub(title: str) -> str:
+    """Prefer the rich interview template; fall back to the terse inline stub."""
+    if RD_TEMPLATE.exists():
+        return RD_TEMPLATE.read_text(encoding="utf-8").replace("{title}", title)
+    return RD_STUB.format(title=title)
 
 
 def _yaml():
@@ -180,7 +190,7 @@ def cmd_new(args):
         elif args.description:
             body = f"# 研究方向：{args.title}\n\n{args.description}\n"
         else:
-            body = RD_STUB.format(title=args.title)
+            body = _rd_stub(args.title)
         v.research_direction.write_text(body, encoding="utf-8")
 
     # state.json
