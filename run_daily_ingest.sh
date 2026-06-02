@@ -13,6 +13,22 @@ export HOME="/home/aaron"
 export PATH="/home/aaron/.local/bin:/home/aaron/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
 export AUTORESEARCH_HOME="$PROJ"  # vault home = repo root (holds data/)
 
+# Outbound (Anthropic API + arxiv) must go through the local Clash proxy —
+# direct egress returns 403 from this network. Clash MUST be running at run time.
+# If your proxy host/port changes, update these two lines.
+PROXY="http://127.0.0.1:7897"
+export HTTPS_PROXY="$PROXY" HTTP_PROXY="$PROXY" https_proxy="$PROXY" http_proxy="$PROXY"
+export NO_PROXY="127.0.0.1,localhost,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,<local>"
+export no_proxy="$NO_PROXY"
+
+# Fail fast with a clear log line if the proxy isn't up (Clash not running).
+if ! curl -s -o /dev/null --max-time 8 -x "$PROXY" https://api.anthropic.com/ ; then
+  mkdir -p "$PROJ/logs"
+  echo "$(date '+%F %T %Z') ABORT: proxy $PROXY unreachable (is Clash running?)" \
+    >> "$PROJ/logs/ingest-$(date +%F).log"
+  exit 3
+fi
+
 mkdir -p "$PROJ/logs"
 LOG="$PROJ/logs/ingest-$(date +%F).log"
 
