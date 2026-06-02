@@ -9,6 +9,9 @@ data/
 *.egg-info/
 .pytest_cache/
 
+# Per-run ingest logs
+logs/
+
 # Local planning notes (not needed by the remote agent)
 PLAN.md
 
