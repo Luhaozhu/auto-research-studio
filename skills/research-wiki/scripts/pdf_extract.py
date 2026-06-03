@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -32,7 +33,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import vault_io  # noqa: E402
 
-UA = "auto-research-wiki/0.1 (https://github.com/; mailto:research@example.com)"
+# Contact email read from ARXIV_CONTACT_EMAIL (loaded from .env by run_daily_ingest.sh).
+_CONTACT_EMAIL = os.environ.get("ARXIV_CONTACT_EMAIL", "research@example.com")
+UA = f"auto-research-wiki/0.1 (+https://github.com/; mailto:{_CONTACT_EMAIL})"
 DELAY = 3.0          # politeness between downloads
 RETRIES = 4
 MAX_BACKOFF = 60.0

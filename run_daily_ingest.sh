@@ -10,15 +10,24 @@ MODEL="claude-opus-4-8"            # change to claude-sonnet-4-6 to cut cost
 
 # cron has a minimal environment — make claude + uv discoverable, set HOME.
 export HOME="/home/aaron"
-export PATH="/home/aaron/.local/bin:/home/aaron/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH="/home/aaron/.local/bin:/home/aaron/.cargo/bin:/home/aaron/anaconda3/bin:/usr/local/bin:/usr/bin:/bin"
 export AUTORESEARCH_HOME="$PROJ"  # vault home = repo root (holds data/)
 
-# Outbound (Anthropic API + arxiv) must go through the local Clash proxy —
-# direct egress returns 403 from this network. Clash MUST be running at run time.
+# Load local config (.env) — e.g. ARXIV_CONTACT_EMAIL for the arXiv User-Agent.
+# `set -a` exports every assignment so the headless `claude -p` + python scripts inherit it.
+if [ -f "$PROJ/.env" ]; then set -a; . "$PROJ/.env"; set +a; fi
+
+# Outbound routing — SPLIT on purpose:
+#   * Anthropic API  -> through the local Clash proxy (direct egress 403s here).
+#   * arXiv          -> DIRECT (verified reachable, HTTP 200). The shared Clash
+#     exit IP is rate-limited collectively by arXiv (1 req / 3s PER IP, across
+#     everyone on that node) -> chronic HTTP 429. Going direct gives arXiv our
+#     own per-IP budget. arxiv hosts are therefore added to NO_PROXY below.
+# Clash MUST be running at run time (for the Anthropic leg).
 # If your proxy host/port changes, update these two lines.
 PROXY="http://127.0.0.1:7897"
 export HTTPS_PROXY="$PROXY" HTTP_PROXY="$PROXY" https_proxy="$PROXY" http_proxy="$PROXY"
-export NO_PROXY="127.0.0.1,localhost,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,<local>"
+export NO_PROXY="127.0.0.1,localhost,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16,export.arxiv.org,arxiv.org,<local>"
 export no_proxy="$NO_PROXY"
 
 # Fail fast with a clear log line if the proxy isn't up (Clash not running).

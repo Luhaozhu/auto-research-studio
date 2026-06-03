@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import sys
 import time
@@ -38,12 +39,27 @@ import vault_io  # noqa: E402
 
 ARXIV_API = "https://export.arxiv.org/api/query"
 NS = {"a": "http://www.w3.org/2005/Atom"}
-PAGE = 100
-DELAY = 3.0  # arXiv API politeness requirement
+PAGE = 200            # results per request; bigger page = fewer requests = fewer 3s waits
+DELAY = 3.0           # arXiv HARD limit: ≤1 request / 3s per IP — cannot go faster
 # arXiv rate-limits requests without a descriptive User-Agent (HTTP 429).
-UA = "auto-research-wiki/0.1 (https://github.com/; mailto:research@example.com)"
+# Contact email is read from ARXIV_CONTACT_EMAIL (loaded from .env by run_daily_ingest.sh).
+_CONTACT_EMAIL = os.environ.get("ARXIV_CONTACT_EMAIL", "research@example.com")
+UA = f"auto-research-wiki/0.1 (+https://github.com/; mailto:{_CONTACT_EMAIL})"
 RETRIES = 5
 MAX_BACKOFF = 60.0
+_last_request_ts = 0.0
+
+
+def _throttle() -> None:
+    """Gate requests to arXiv's ≤1-per-3s rule by *time since the last request*,
+    not a blind per-call sleep: time already spent parsing the previous response
+    counts toward the 3s gap, so we never wait longer than required (and never
+    go faster than allowed). Shared across every page of a fetch."""
+    global _last_request_ts
+    wait = DELAY - (time.monotonic() - _last_request_ts)
+    if wait > 0:
+        time.sleep(wait)
+    _last_request_ts = time.monotonic()
 
 
 def _read_url(url: str) -> bytes:
@@ -51,6 +67,7 @@ def _read_url(url: str) -> bytes:
     backoff = DELAY
     last_exc: Exception | None = None
     for attempt in range(RETRIES):
+        _throttle()  # enforce ≤1 req / 3s by elapsed time, before every attempt
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=60) as resp:
@@ -204,7 +221,7 @@ def fetch(query: str, cutoff: dt.date, max_results: int) -> list[dict]:
         if stop or len(entries) < PAGE:
             break
         start += PAGE
-        time.sleep(DELAY)
+        # pacing handled by _throttle() inside _read_url (next iteration)
     return out[:max_results]
 
 
