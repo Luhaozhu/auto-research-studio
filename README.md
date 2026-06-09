@@ -1,5 +1,7 @@
 # auto-research-studio
 
+**简体中文** | [English](README.en.md)
+
 一个**自动追踪 AI 研究方向**的本地知识库系统。核心是 `research-wiki` skill：
 每天定时抓取某个研究方向的最新 arXiv 论文，由 Claude 做相关性打分、抽全文与架构图，
 再把保留的论文**编译进一个交叉链接的中文 Wiki（Obsidian 风格）**，并产出当日简报。
