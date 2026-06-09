@@ -117,6 +117,9 @@ cd skills/research-wiki && uv sync && cd -
 # 1. 建数据仓库（每台机器一次）
 skills/research-wiki/.venv/bin/python skills/research-wiki/scripts/vault_admin.py init-repo
 
+# 1b.（可选，定时任务用）准备本地配置：复制 .env.example 为 .env 填上联系邮箱等
+cp .env.example .env   # 然后编辑 ARXIV_CONTACT_EMAIL / DIRECTION / MODEL / PROXY
+
 # 2~4. 新建一个方向：最省事的方式是直接让 Claude Code 跑 research-wiki skill —
 #      它会先采访你把方向问清楚，再 new + init 冷启动。
 #      （research-wiki 是一个 Claude Code skill，详见 skills/research-wiki/SKILL.md）
@@ -135,19 +138,19 @@ skills/research-wiki/.venv/bin/python skills/research-wiki/scripts/vault_admin.p
 
 `run_daily_ingest.sh` 是定时任务入口：它在无人值守下启动 headless 的 `claude -p`，
 对配置好的方向跑一次 `ingest`，把结果写进本地 vault，并把整段输出记到当天日志。
+脚本本身**不含任何机器相关路径**——仓库根目录由脚本自身位置推断，其余配置走 `.env`。
 
-**1. 先确认脚本里的配置**（脚本顶部几行）：
+**1. 配置（复制 `.env.example` 到 `.env` 再改）**：`.env` 被 gitignore，不会提交。
 
 | 变量 | 含义 |
 |---|---|
-| `PROJ` | 本仓库根目录（vault 数据就放在它下面的 `data/`） |
-| `DIRECTION` | 要每天更新的方向 slug |
-| `MODEL` | 用哪个模型（`claude-opus-4-8`；想省钱可换 `claude-sonnet-4-6`） |
-| `PROXY` | 出站代理地址。**Anthropic API 与 arXiv 需走代理**，脚本会先探活，代理不通就清晰地 ABORT 并记日志 |
+| `DIRECTION` | 要每天更新的方向 slug（默认 `agent-harness`） |
+| `MODEL` | 用哪个模型（`claude-opus-4-8`；想省钱换 `claude-sonnet-4-6`） |
+| `ARXIV_CONTACT_EMAIL` | 写进 arXiv User-Agent 的联系邮箱（arXiv 礼仪，降低 429） |
+| `PROXY` | **可选**出站代理。仅当本机直连 Anthropic API 受限时才需要；arXiv 始终直连。留空即纯直连。脚本会先探活，不通就清晰地 ABORT 并记日志 |
 
-脚本已显式设置 `PATH` / `HOME` / `AUTORESEARCH_HOME`，因为 cron 的环境极简——
-`uv`、`claude` 等必须能被找到（这点曾经踩坑：`uv` 不在默认 PATH 上导致 `uv sync` 静默失败，
-现已把其安装目录补进 PATH）。
+脚本会自动补好 `PATH` / `HOME` / `AUTORESEARCH_HOME`，因为 cron 的环境极简——
+`uv`、`claude` 等必须能被找到（曾踩坑：`uv` 不在默认 PATH 上导致 `uv sync` 静默失败）。
 
 **2. 装进 crontab**（每天早上 8:00 跑一次为例）：
 
@@ -162,11 +165,12 @@ crontab -e
 
 **注意事项**
 
-- **代理必须在运行时已启动**：脚本会先用代理探测 `api.anthropic.com`，不通则直接 ABORT
-  并在日志写明原因（避免空跑）。
+- **网络须可达**：脚本运行前会探测 `api.anthropic.com`（配了 `PROXY` 就经代理探），
+  不通则直接 ABORT 并在日志写明原因，避免空跑。
 - **cron 只在机器开机时触发**：若到点时机器/WSL 关着，这一跑会被跳过——但下次会从
   `state.json` 水位线继续，不会漏论文（只是简报会合并补抓）。
-- **想换模型省成本**：把脚本里的 `MODEL` 改成 `claude-sonnet-4-6`。
+- **退出码**：`rc=3` 网络/代理不可达；`rc=4` 模型返回 0 但没写出当天简报（疑似空跑，
+  便于 cron 监控发现）；`rc=0` 正常。
 
 ---
 
@@ -175,6 +179,7 @@ crontab -e
 ```
 .
 ├── run_daily_ingest.sh        # 定时任务入口（headless ingest + 日志）
+├── .env.example               # 定时任务的本地配置模板（复制为 .env，gitignore）
 ├── skills/research-wiki/      # research-wiki skill（脚本 + 子代理 + SKILL.md + 自带 README）
 │   ├── SKILL.md               # 完整工作流与命令说明
 │   ├── scripts/               # arxiv_fetch / relevance_filter / pdf_extract / figure_extract …

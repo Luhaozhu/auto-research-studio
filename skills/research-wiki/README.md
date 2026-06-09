@@ -94,7 +94,7 @@ uv sync                       # 或：pip install pymupdf pyyaml
 5. 打分 rubric（0.85–1.0 / 0.6–0.85 / 0.4–0.6 / <0.4 各代表什么）
 6. 锚点工作 3–8 个
 7. 检索配置（arXiv categories + keywords，**连同义词/缩写一起列全**）
-8. 节奏与规模（bootstrap 月数 / max-papers / 抓取节奏）
+8. 节奏与规模（bootstrap 月数 / 冷启动收录上限（靠阈值+打分时手动控量）/ 抓取节奏）
 
 把答案写进一个 markdown 文件，作为下一步的 `--direction-file`。
 
@@ -124,7 +124,8 @@ uv sync                       # 或：pip install pymupdf pyyaml
 6. librarian: 逐篇编译进 wiki/papers（综述进 wiki/surveys），嵌入架构图，建 index.md
 7. 置 state.json initialized=true、last_ingest=today、paper_count；registry 同步
 ```
-`init` 很重（可能上百篇 PDF）。`pdf_extract.py` 建议后台跑；`--max-papers` 与阈值是成本闸门。
+`init` 很重（可能上百篇 PDF）。`pdf_extract.py` 建议后台跑；成本闸门 = 相关性阈值
++ 打分时只保留 top-N（手动控量，没有专门的 flag）+ `bootstrap_seed.py --top` 控雪球宽度。
 
 ### Step 5 · `ingest`（每日增量 + 简报，天天跑）
 和 init 同流水线，去掉 bootstrap_seed；`arxiv_fetch.py` 读 `state.json` 的 `last_ingest`

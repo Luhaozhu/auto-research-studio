@@ -62,7 +62,8 @@ def cmd_apply(args):
     out = json.dumps(kept, ensure_ascii=False, indent=2)
     if args.out:
         Path(args.out).write_text(out, encoding="utf-8")
-        print(f"{len(kept)}/{len(cands)} kept -> {args.out}", file=sys.stderr)
+        print(f"{len(kept)}/{len(scores)} kept (>= {args.threshold}) -> {args.out}",
+              file=sys.stderr)
     else:
         print(out)
 

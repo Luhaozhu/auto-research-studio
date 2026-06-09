@@ -82,8 +82,8 @@ Step 3/4 的论文搜索。** 采访方式是**对话式逐簇追问**——一�
   5. **打分 rubric**：0.85–1.0 / 0.6–0.85 / 0.4–0.6 / <0.4 各代表什么；阈值（默认 0.6）。
   6. **锚点工作 3–8 个**：代表性论文/方法名，既做打分参照系，也做 citation 雪球种子。
   7. **检索配置**：arXiv categories；keywords（**务必连同义词/缩写一起列全**，召回靠它）。
-  8. **节奏与规模**：bootstrap 回溯月数（默认 6，新兴方向 12–14）；冷启动收录上限
-     `--max-papers`；每日/每周抓取节奏与触发时间。
+  8. **节奏与规模**：bootstrap 回溯月数（默认 6，新兴方向 12–14）；冷启动想收录多少篇
+     （成本闸门：靠相关性阈值 + 打分时只保留 top-N 来控量）；每日/每周抓取节奏与触发时间。
 
   采访收尾前，**把每一簇消化后的结论复述给用户确认一遍**（尤其一句话定义、in/out-of-scope、
   锚点工作、keywords），用户点头后再把结果**写进一个 markdown 文件**（结构照
@@ -196,7 +196,8 @@ Run once per direction so idea-forge has material from day one.
      # YOU read ws.json, score each 0-1, write scores.json {arxiv_id: score}
 4. relevance_filter.py apply --candidates seed.json --scores scores.json \
      --threshold <registry> --out kept.json
-     # priority cap to --max-papers: survey > high-relevance recent > snowball
+     # to cap cold-start volume, keep only the top-N when you score in step 3
+     # (priority: survey > high-relevance recent > snowball) — there is no flag for it
 5. pdf_extract.py --candidates kept.json --direction <slug>
      # downloads each PDF -> raw/paper/<slug>.pdf, full text -> raw/text/<slug>.txt,
      # merges extraction facts into raw/meta/<slug>.json. Resume-safe; failures
@@ -214,8 +215,9 @@ Run once per direction so idea-forge has material from day one.
    ingested ids (e.g. init_progress.processed). Bump the registry entry's
    `initialized: true` and `last_ingest` so daily `ingest` knows where to resume.
 ```
-`init` is heavy (hundreds of PDFs). Run `pdf_extract.py` in the background;
-`--max-papers` and the relevance threshold are the cost knobs.
+`init` is heavy (hundreds of PDFs). Run `pdf_extract.py` in the background. The
+cost knobs are the relevance threshold and how many you keep when scoring (a
+manual top-N cap in step 3) — plus `bootstrap_seed.py --top` for snowball width.
 
 ## Workflow: `ingest` (daily incremental)
 Same pipeline minus bootstrap_seed; `arxiv_fetch.py` reads the `last_ingest`

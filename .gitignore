@@ -18,6 +18,9 @@ PLAN.md
 # Local config (contact email, etc.) — not committed
 .env
 
+# Local Claude Code working dir (settings, locks)
+.claude/
+
 # OS cruft
 .DS_Store
 Thumbs.db
